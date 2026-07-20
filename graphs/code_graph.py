@@ -1,0 +1,236 @@
+"""
+graphs/code_graph.py
+LangGraph graph for the Code Review agent.
+
+Flow: Parse → Lint → Security Scan → Complexity → LLM Review → Format Report
+"""
+from typing import TypedDict, Annotated, List
+import operator
+from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.memory import MemorySaver
+from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
+from config.settings import get_llm, CODE_REVIEW_SYSTEM
+from tools.code_tools import analyze_python_syntax, run_pylint, calculate_complexity, check_security_issues
+
+
+# ─── State ──────────────────────────────────────────────────────────────────
+
+class CodeReviewState(TypedDict):
+    messages: Annotated[List[BaseMessage], operator.add]
+    code: str
+    language: str
+    syntax_report: str
+    lint_report: str
+    security_report: str
+    complexity_report: str
+    llm_review: str
+    final_report: str
+    severity: str  # "clean", "minor", "moderate", "critical"
+
+
+# ─── Nodes ──────────────────────────────────────────────────────────────────
+
+def syntax_analyzer_node(state: CodeReviewState) -> dict:
+    """Run AST-based syntax analysis."""
+    if state["language"].lower() != "python":
+        return {
+            "syntax_report": f"⚠️ Syntax analysis only supports Python (got: {state['language']})",
+            "messages": [AIMessage(content="Syntax analysis skipped (non-Python).")],
+        }
+    result = analyze_python_syntax.invoke({"code": state["code"]})
+    return {
+        "syntax_report": result,
+        "messages": [AIMessage(content="🔬 Syntax analysis complete.")],
+    }
+
+
+def lint_analyzer_node(state: CodeReviewState) -> dict:
+    """Run pylint analysis."""
+    if state["language"].lower() != "python":
+        return {
+            "lint_report": "Linting skipped for non-Python code.",
+            "messages": [],
+        }
+    result = run_pylint.invoke({"code": state["code"]})
+    return {
+        "lint_report": result,
+        "messages": [AIMessage(content="🔍 Lint analysis complete.")],
+    }
+
+
+def security_scanner_node(state: CodeReviewState) -> dict:
+    """Run security vulnerability scan."""
+    result = check_security_issues.invoke({"code": state["code"]})
+    return {
+        "security_report": result,
+        "messages": [AIMessage(content="🔒 Security scan complete.")],
+    }
+
+
+def complexity_analyzer_node(state: CodeReviewState) -> dict:
+    """Run cyclomatic complexity analysis."""
+    if state["language"].lower() != "python":
+        return {
+            "complexity_report": "Complexity analysis skipped for non-Python code.",
+            "messages": [],
+        }
+    result = calculate_complexity.invoke({"code": state["code"]})
+    return {
+        "complexity_report": result,
+        "messages": [AIMessage(content="📊 Complexity analysis complete.")],
+    }
+
+
+def llm_reviewer_node(state: CodeReviewState) -> dict:
+    """Use LLM to provide a high-level code review."""
+    llm = get_llm(temperature=0.3)
+    response = llm.invoke([
+        CODE_REVIEW_SYSTEM,
+        HumanMessage(content=(
+            f"Review this {state['language']} code:\n\n```{state['language']}\n{state['code']}\n```\n\n"
+            f"Static Analysis Results:\n"
+            f"Syntax: {state['syntax_report']}\n\n"
+            f"Lint: {state['lint_report'][:500]}\n\n"
+            f"Security: {state['security_report']}\n\n"
+            f"Complexity: {state['complexity_report']}\n\n"
+            "Provide a comprehensive code review covering:\n"
+            "1. **Overall Quality** (rate 1-10)\n"
+            "2. **Issues Found** (with severity: 🔴 Critical / 🟡 Medium / 🟢 Minor)\n"
+            "3. **Best Practice Violations**\n"
+            "4. **Performance Considerations**\n"
+            "5. **Specific Improvement Suggestions** (with code examples)\n"
+            "6. **Positive Aspects** (what was done well)\n"
+        ))
+    ])
+    
+    # Determine severity
+    content = response.content
+    severity = "clean"
+    if "🔴" in content or "Critical" in content:
+        severity = "critical"
+    elif "🟡" in content or "Medium" in content:
+        severity = "moderate"
+    elif "🟢" in content or "Minor" in content:
+        severity = "minor"
+    
+    return {
+        "llm_review": content,
+        "severity": severity,
+        "messages": [AIMessage(content="🤖 AI review complete.")],
+    }
+
+
+def report_formatter_node(state: CodeReviewState) -> dict:
+    """Compile all analyses into a final structured report."""
+    severity_emoji = {
+        "clean": "✅", "minor": "🟢", "moderate": "🟡", "critical": "🔴"
+    }.get(state["severity"], "⚪")
+    
+    report = f"""# 🔍 Code Review Report
+
+**Language:** {state["language"]} | **Severity:** {severity_emoji} {state["severity"].upper()}
+
+---
+
+## 📋 Static Analysis
+
+### Syntax Check
+{state["syntax_report"]}
+
+### 🔒 Security Scan
+{state["security_report"]}
+
+### 📊 Complexity Analysis
+{state["complexity_report"]}
+
+---
+
+## 🤖 AI Code Review
+
+{state["llm_review"]}
+
+---
+*Generated by AI Code Review Agent powered by Claude + LangGraph*
+"""
+    return {
+        "final_report": report,
+        "messages": [AIMessage(content="✅ Code review report ready!")],
+    }
+
+
+# ─── Graph Builder ───────────────────────────────────────────────────────────
+
+def build_code_review_graph() -> StateGraph:
+    builder = StateGraph(CodeReviewState)
+
+    builder.add_node("syntax_analyzer", syntax_analyzer_node)
+    builder.add_node("lint_analyzer", lint_analyzer_node)
+    builder.add_node("security_scanner", security_scanner_node)
+    builder.add_node("complexity_analyzer", complexity_analyzer_node)
+    builder.add_node("llm_reviewer", llm_reviewer_node)
+    builder.add_node("report_formatter", report_formatter_node)
+
+    builder.add_edge(START, "syntax_analyzer")
+    builder.add_edge("syntax_analyzer", "lint_analyzer")
+    builder.add_edge("lint_analyzer", "security_scanner")
+    builder.add_edge("security_scanner", "complexity_analyzer")
+    builder.add_edge("complexity_analyzer", "llm_reviewer")
+    builder.add_edge("llm_reviewer", "report_formatter")
+    builder.add_edge("report_formatter", END)
+
+    memory = MemorySaver()
+    return builder.compile(checkpointer=memory)
+
+
+# ─── Convenience runner ──────────────────────────────────────────────────────
+
+def review_code(code: str, language: str = "python", thread_id: str = "review-1") -> str:
+    """Review code and return the full report."""
+    graph = build_code_review_graph()
+    config = {"configurable": {"thread_id": thread_id}}
+    initial_state = {
+        "messages": [HumanMessage(content=f"Review this {language} code")],
+        "code": code,
+        "language": language,
+        "syntax_report": "",
+        "lint_report": "",
+        "security_report": "",
+        "complexity_report": "",
+        "llm_review": "",
+        "final_report": "",
+        "severity": "clean",
+    }
+    result = graph.invoke(initial_state, config)
+    return result["final_report"]
+
+
+if __name__ == "__main__":
+    from dotenv import load_dotenv
+    load_dotenv()
+    
+    sample_code = '''
+import os
+import pickle
+
+def login(username, password="admin123"):
+    user_data = pickle.loads(get_user_data())
+    if username == "admin" and password == "admin123":
+        return True
+    return eval(f"check_user('{username}')")
+
+def calculate_fibonacci(n):
+    if n <= 0:
+        return []
+    if n == 1:
+        return [0]
+    fib = [0, 1]
+    for i in range(2, n):
+        fib.append(fib[i-1] + fib[i-2])
+        for j in range(len(fib)):  # unnecessary nested loop
+            _ = fib[j]
+    return fib
+'''
+    
+    print("\n🛠️ Code Review Agent\n" + "="*50)
+    report = review_code(sample_code, "python")
+    print(report)

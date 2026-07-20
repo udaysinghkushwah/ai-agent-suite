@@ -1,0 +1,41 @@
+# Core LangChain ecosystem
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-anthropic>=0.3.0
+langchain-community>=0.3.0
+langchain-chroma>=0.1.0
+langgraph>=0.2.0
+
+# LangSmith (observability & tracing)
+langsmith>=0.1.0
+
+# LLM Provider
+anthropic>=0.40.0
+
+# Vector store & embeddings
+chromadb>=0.5.0
+sentence-transformers>=3.0.0
+
+# Search tools
+duckduckgo-search>=6.0.0
+tavily-python>=0.3.0
+
+# Web scraping & parsing
+beautifulsoup4>=4.12.0
+requests>=2.32.0
+wikipedia>=1.4.0
+
+# Code analysis tools
+pylint>=3.0.0
+pyflakes>=3.0.0
+radon>=6.0.0
+
+# UI
+streamlit>=1.40.0
+streamlit-chat>=0.1.0
+
+# Utilities
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+rich>=13.0.0
+tiktoken>=0.7.0
