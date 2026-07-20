@@ -260,6 +260,14 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
+    st.divider()
+    st.markdown("""
+    <div style="text-align:center; margin-bottom: 0.5rem;">
+        <span style="font-size:0.9rem; font-weight:600; color:white;">☕ Buy Me a Coffee</span>
+    </div>
+    """, unsafe_allow_html=True)
+    st.image("assets/upi-qr.jpg", caption="Scan via UPI to support!", use_container_width=True)
+
 
 # ─── Hero Banner ─────────────────────────────────────────────────────────────
 
@@ -344,6 +352,17 @@ if agent_choice == "🏠 Dashboard":
         """)
     
     st.info("💡 **Tip:** Every agent run is automatically traced in LangSmith. Open [smith.langchain.com](https://smith.langchain.com) to see full execution traces.")
+
+    st.divider()
+    coffee_col1, coffee_col2 = st.columns([1, 4])
+    with coffee_col1:
+        st.image("assets/upi-qr.jpg", width=140, caption="UPI QR Code")
+    with coffee_col2:
+        st.markdown("""
+        ### ☕ Buy Me a Coffee
+        If you find this suite of AI agents useful, feel free to support my work by buying me a coffee. 
+        Scan the QR code using any UPI app. Thank you for your support!
+        """)
 
 
 # ══════════════════════════════════════════════════════════════════════════════

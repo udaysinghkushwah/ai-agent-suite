@@ -129,3 +129,13 @@ python graphs/general_graph.py
 ## 📄 License
 
 MIT License — feel free to use and extend!
+
+---
+
+## ☕ Support
+
+If you find this project helpful, consider buying me a coffee! Scan the QR code below:
+
+<p align="left">
+  <img src="assets/upi-qr.jpg" alt="UPI QR Code" width="220" />
+</p>
