@@ -132,10 +132,8 @@ MIT License — feel free to use and extend!
 
 ---
 
-## ☕ Support
+## Support
 
-If you find this project helpful, consider buying me a coffee! Scan the QR code below:
+If you find this project helpful, support my work by buying me a chai!
 
-<p align="left">
-  <img src="assets/upi-qr.jpg" alt="UPI QR Code" width="220" />
-</p>
+[![Buy Me A Chai](https://img.shields.io/badge/Buy%20Me%20a%20Chai-orange?style=for-the-badge&logo=coffee&logoColor=white)](https://www.buymeachai.in/toudaysinghkushwah)
