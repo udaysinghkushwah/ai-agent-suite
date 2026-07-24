@@ -266,7 +266,12 @@ with st.sidebar:
         <span style="font-size:0.9rem; font-weight:600; color:white;">☕ Buy Me a Coffee</span>
     </div>
     """, unsafe_allow_html=True)
-    st.image("assets/upi-qr.jpg", caption="Scan via UPI to support!", use_container_width=True)
+    import os
+    if os.path.exists("assets/upi-qr.jpg"):
+        st.image("assets/upi-qr.jpg", caption="Scan via UPI to support!", use_container_width=True)
+    else:
+        st.info("💡 Place your `upi-qr.jpg` in the `assets/` folder to display your QR code here.")
+
 
 
 # ─── Hero Banner ─────────────────────────────────────────────────────────────
@@ -356,7 +361,11 @@ if agent_choice == "🏠 Dashboard":
     st.divider()
     coffee_col1, coffee_col2 = st.columns([1, 4])
     with coffee_col1:
-        st.image("assets/upi-qr.jpg", width=140, caption="UPI QR Code")
+        import os
+        if os.path.exists("assets/upi-qr.jpg"):
+            st.image("assets/upi-qr.jpg", width=140, caption="UPI QR Code")
+        else:
+            st.warning("⚠️ QR code image missing in assets/")
     with coffee_col2:
         st.markdown("""
         ### ☕ Buy Me a Coffee
